@@ -1,0 +1,149 @@
+generator client{
+	provider = "prisma-client-js"
+}
+
+datasource db{
+	provider="postgresql"
+	url = env("PROD_DB_URL")
+}
+
+enum Gender{
+	Male
+	Female
+	Other
+}
+
+enum MessageType{
+	Text
+	Image
+	File
+}
+
+enum UserType{
+	Patient
+	Doctor
+	Admin
+}
+
+enum RequestStatusType{
+	Pending
+	Accepted
+	Rejected
+}
+
+enum IntakeStatus{
+	Taken
+	Skipped
+	Unlisted
+}
+
+model User{
+	userId String @id() @default(uuid())
+	firstName String
+	lastName String
+	email String @unique()
+	password String
+	bio String?
+	profilePicture String?
+	voximplantUsername String?
+	dob DateTime @default(now())
+	role UserType @default(Patient)
+	gender Gender
+	verified Boolean @default(true)
+	medicines Medicine[]
+	creatorChat Chat[] @relation("firstParticipant")
+	participantChat Chat[] @relation("secondParticipant")
+	messages Message[]
+	outgoingRequests Request[] @relation("requestFrom")
+	incomingRequests Request[] @relation("requestTo")
+	professionalDetails ProfessionalDetails?
+	createdAt DateTime @default(now())
+	resetToken Int?
+}
+
+model ProfessionalDetails{
+	detailsId String @id() @default(uuid())
+	expertise String
+	medicalDocuments String[]
+	userId String
+	user User @relation(fields:[userId], references:[userId])
+}
+
+model UserRole{
+	roleId String @id() @default(uuid())
+	name UserType
+}
+
+model Medicine{
+	medicineId String @id() @default(uuid())
+	name String
+	description String?
+	active Boolean @default(true)
+	userId String
+	user User @relation(fields:[userId], references:[userId])
+	createdAt DateTime @default(now())
+	schedules Schedule[]
+	frequencies Frequency[]
+	days Int[]
+}
+
+model Schedule{
+	scheduleId String @id @default(uuid())
+	hour Int
+	minutes Int
+	medicineId String
+	medicine Medicine @relation(fields:[medicineId], references:[medicineId])
+	intakes Intake[]
+}
+
+model Frequency{
+	frequencyId String @id() @default(uuid())
+	date DateTime @default(now())
+	days Int[]
+	frequencyPerWeek Int	
+	medicineId String
+	medicine Medicine @relation(fields:[medicineId], references:[medicineId])
+}
+
+model Chat{
+	chatId String @id() @default(uuid())
+	firstUser String
+	secondUser String
+	firstParticipant User @relation("firstParticipant", fields:[firstUser], references:[userId])	
+	secondParticipant User @relation("secondParticipant", fields:[secondUser], references:[userId])
+	messages Message[]
+}
+
+model Message{
+	messageId String @id @default(uuid())
+	authorId String
+	author User @relation(fields:[authorId], references:[userId])
+	date DateTime @default(now())
+	type MessageType
+	name String? @default("")
+	content String
+	chatBot Boolean @default(false)
+	seen Boolean @default(false)
+	forwardable Boolean @default(false)
+	chatId String
+	chat Chat @relation(fields:[chatId], references:[chatId])
+}
+
+model Request{
+	requestId String @id() @default(uuid())
+	status RequestStatusType @default(Pending)
+	sendingUser String
+	receivingUser String
+	requestFrom User @relation("requestFrom", fields:[sendingUser], references:[userId])
+	requestTo User @relation("requestTo", fields:[receivingUser], references:[userId])
+}
+
+model Intake{
+	intakeId String @id() @default(uuid())
+	status IntakeStatus @default(Unlisted)	
+	date String
+	intakeTime DateTime?
+	scheduleId String
+	schedule Schedule @relation(fields:[scheduleId], references:[scheduleId])
+}
+
